@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router()
 const requireLogin = require('../middleware/requireLogin')
 const Post = mongoose.model('Post')
+const User = mongoose.model('User')
 
 router.post('/createpost', requireLogin, (req, res) => {
     const { body, pic } = req.body
@@ -27,6 +28,22 @@ router.get('/allpost', requireLogin, (req, res) => {
         .then(posts => {
             res.json({ posts })
         })
+})
+
+router.get('/subpost',requireLogin,(req,res)=>{
+    Post.find({postedBy:{$in:req.user.following}})
+    .populate('postedBy', '_id name pic email')
+    .populate('comments.postedBy','_id name pic')
+    .then(posts=>{
+                res.json({posts})
+            }).catch(err=> console.log(err))
+})
+
+router.get('/myfollowers',requireLogin,(req,res)=>{
+    User.find({_id:{$in:req.user.followers}})
+   .then(result=>{
+                res.json({result})
+            }).catch(err=> console.log(err))
 })
 
 router.put('/like', requireLogin, (req, res) => {
@@ -107,8 +124,10 @@ router.put('/comment', requireLogin, (req, res) => {
 router.get('/mypost', requireLogin, (req, res) => {
     Post.find({ postedBy: req.user._id }).populate('postedBy', '_id name email pic')
         .then(post => {
-            res.json({ post })
+            req.user.password=undefined
+            res.json({ post:post,user:req.user })
         })
+
 })
 
 module.exports = router
